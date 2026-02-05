@@ -110,22 +110,13 @@ checkDivision(100, 3, 4);
 
 
 // 6. Сэндвичи с сыром
-function countSandwiches(bread, cheese) {
-    const maxByBread = Math.floor(bread / 2);
-    const maxByCheese = cheese;
-    const sandwiches = Math.min(maxByBread, maxByCheese);
-
-    logger(
-        'Bread =', bread,
-        'Cheese =', cheese,
-        '->', sandwiches, 'сэндвич(ей)'
-    );
-
-    return sandwiches;
+function countSandwiches(ingredients) {
+    const breadMax = Math.floor(ingredients.bread / 2);
+    const cheeseMax = ingredients.cheese;
+    return Math.min(breadMax, cheeseMax);
 }
 
-logger('// 6. Сэндвичи с сыром');
-countSandwiches(10, 1);
+logger('countSandwiches({bread: 5, cheese: 6}) =', countSandwiches({ bread: 5, cheese: 6 }));
 
 
 // 7. Абсолютное значение
@@ -182,11 +173,14 @@ logger(myFilterArray(['Short', 'VeryLong'], isFirstS));
 
 // 11. Равенство чисел
 function toBeCloseTo(num1, num2) {
+    const epsilon = Number.EPSILON;
+    const absNum1 = Math.abs(num1);
+    const absNum2 = Math.abs(num2);
     const diff = Math.abs(num1 - num2);
-    const tolerance = 1e-10;
-
-    return diff < tolerance;
+    if (num1 === num2) return true;
+    if (num1 === 0 || num2 === 0) return diff < epsilon;
+    const absMax = Math.max(absNum1, absNum2);
+    return diff / absMax < epsilon;
 }
-
 logger('// 11. Равенство чисел');
 logger('toBeCloseTo(0.1 + 0.2, 0.3) =', toBeCloseTo(0.1 + 0.2, 0.3));
