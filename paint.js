@@ -23,7 +23,7 @@ document.getElementById('clear').addEventListener('click', () => ctx.clearRect(0
 // События мыши (делигирование на canvas)
 canvas.addEventListener('mousedown', (e) => {
     isDrawing = true;
-    draw(e); // начать сразу
+    draw(e);
 });
 
 canvas.addEventListener('mousemove', draw);
@@ -40,7 +40,7 @@ function draw(e) {
     ctx.lineCap = 'round';
 
     if (tool === 'eraser') {
-        ctx.strokeStyle = '#fff'; // белый для стирки
+        ctx.strokeStyle = '#fff';
         ctx.globalCompositeOperation = 'destination-out';
     } else {
         ctx.strokeStyle = color;
