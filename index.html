@@ -1,0 +1,53 @@
+<!DOCTYPE html>
+<html>
+
+<head>
+    <h1>Paint</h1>
+    <style>
+        canvas {
+            border: 1px solid black;
+            cursor: crosshair;
+        }
+
+        .tools {
+            margin: 15px 10px 0 0;
+        }
+
+        .tools button {
+            margin-right: 20px;
+            margin-bottom: 10px;
+            padding: 8px 16px;
+            cursor: pointer;
+        }
+
+        .tools label {
+            margin-right: 15px;
+            margin-left: 10px;
+        }
+
+        .colors {
+            display: flex;
+            gap: 10px;
+        }
+
+        .color {
+            width: 30px;
+            height: 30px;
+            border: 1px solid #ccc;
+            cursor: pointer;
+        }
+    </style>
+</head>
+
+<body>
+    <div class="tools">
+        <button id="pencil">Карандаш</button>
+        <button id="eraser">Ластик</button>
+        <button id="clear">Очистить</button>
+        <label>Цвет: <div class="colors" id="palette"></div></label>
+    </div>
+    <canvas id="canvas" width="800" height="600"></canvas>
+    <script src="paint.js"></script>
+</body>
+
+</html>
