@@ -7,6 +7,7 @@ let isDrawing = false;
 // Палитра цветов
 const colors = ['#000', '#333', '#666', '#999', '#ccc', '#f00', '#c00', '#800', '#0f0', '#080'];
 const palette = document.getElementById('palette');
+// Сделать через делегирование обработки
 colors.forEach(c => {
     const div = document.createElement('div');
     div.className = 'color';
@@ -30,8 +31,10 @@ canvas.addEventListener('mousemove', draw);
 canvas.addEventListener('mouseup', () => isDrawing = false);
 canvas.addEventListener('mouseout', () => isDrawing = false);
 
+// В функции описать все инструменты, чтобы было ясно, где какой.
 function draw(e) {
     if (!isDrawing) return;
+    // Лучше вынести в переменную и не запрашить не каждое событие
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
