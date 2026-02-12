@@ -7,21 +7,56 @@ let isDrawing = false;
 // Палитра цветов
 const colors = ['#000', '#333', '#666', '#999', '#ccc', '#f00', '#c00', '#800', '#0f0', '#080'];
 const palette = document.getElementById('palette');
-// Сделать через делегирование обработки
+
+// Палитра с активным классом
+function setColor(newColor, clickedElement) {
+    color = newColor;
+
+    // Снимаем active со ВСЕХ цветов
+    document.querySelectorAll('.color').forEach(el => el.classList.remove('active'));
+
+    // Добавляем active к выбранному
+    clickedElement.classList.add('active');
+}
+
+palette.addEventListener('click', (e) => {
+    if (e.target.classList.contains('color')) {
+        setColor(e.target.style.backgroundColor, e.target);
+    }
+});
+
 colors.forEach(c => {
     const div = document.createElement('div');
     div.className = 'color';
     div.style.backgroundColor = c;
-    div.addEventListener('click', () => color = c);
     palette.appendChild(div);
 });
 
-// Инструменты
-document.getElementById('pencil').addEventListener('click', () => tool = 'pencil');
-document.getElementById('eraser').addEventListener('click', () => tool = 'eraser');
-document.getElementById('clear').addEventListener('click', () => ctx.clearRect(0, 0, canvas.width, canvas.height));
+// Инструменты — с активным классом
+const pencilBtn = document.getElementById('pencil');
+const eraserBtn = document.getElementById('eraser');
+const clearBtn = document.getElementById('clear');
 
-// События мыши (делигирование на canvas)
+function setTool(newTool) {
+    tool = newTool;
+    pencilBtn.classList.remove('active');
+    eraserBtn.classList.remove('active');
+    clearBtn.classList.remove('active');
+    if (newTool === 'pencil') pencilBtn.classList.add('active');
+    if (newTool === 'eraser') eraserBtn.classList.add('active');
+}
+
+pencilBtn.addEventListener('click', () => setTool('pencil'));
+eraserBtn.addEventListener('click', () => setTool('eraser'));
+clearBtn.addEventListener('click', () => {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setTool('pencil');
+});
+
+// Инициализация
+setTool('pencil');
+
+// События мыши
 canvas.addEventListener('mousedown', (e) => {
     isDrawing = true;
     draw(e);
@@ -31,10 +66,9 @@ canvas.addEventListener('mousemove', draw);
 canvas.addEventListener('mouseup', () => isDrawing = false);
 canvas.addEventListener('mouseout', () => isDrawing = false);
 
-// В функции описать все инструменты, чтобы было ясно, где какой.
 function draw(e) {
     if (!isDrawing) return;
-    // Лучше вынести в переменную и не запрашить не каждое событие
+
     const rect = canvas.getBoundingClientRect();
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
@@ -42,10 +76,13 @@ function draw(e) {
     ctx.lineWidth = 5;
     ctx.lineCap = 'round';
 
-    if (tool === 'eraser') {
+    // Описание инструментов:
+    // - 'pencil': обычная кисть, цвет из палитры, source-over
+    // - 'eraser': стирание, белый цвет + destination-out (удаляет пиксели)
+    if (tool === 'eraser') { // Eraser - ластик
         ctx.strokeStyle = '#fff';
         ctx.globalCompositeOperation = 'destination-out';
-    } else {
+    } else { // Pencil или другие
         ctx.strokeStyle = color;
         ctx.globalCompositeOperation = 'source-over';
     }
