@@ -1,0 +1,206 @@
+import * as THREE from 'three';
+import { OrbitControls } from 'three/addons/OrbitControls.js';
+
+// Конфигурация
+const CONFIG = {
+    step: 0.5,
+    frustumSize: 15,
+    colors: { background: 0x2a2a2a, floor: 0x808080 }
+};
+
+// Состояние приложения
+const state = {
+    scene: null,
+    cameras: {},
+    renderers: {},
+    controls: null,
+    objects: [],
+    selected: null
+};
+
+// Инициализация
+function init() {
+    state.scene = setupScene();
+    createObjects();
+    setupViewports();
+    setupEvents();
+    animate();
+}
+
+function setupScene() {
+    const scene = new THREE.Scene();
+    scene.background = new THREE.Color(CONFIG.colors.background);
+
+    const light = new THREE.HemisphereLight(0xffffff, 0x444444, 1.5);
+    light.position.set(0, 20, 0);
+    scene.add(light);
+
+    scene.add(new THREE.AxesHelper(5));
+    scene.add(new THREE.GridHelper(20, 20));
+
+    return scene;
+}
+
+// Хелпер для создания объектов
+function addSceneObject(geometry, position, name) {
+    const material = new THREE.MeshLambertMaterial({ color: 0xff0000 });
+    const mesh = new THREE.Mesh(geometry, material);
+    mesh.position.copy(position);
+    mesh.name = name;
+    state.scene.add(mesh);
+    state.objects.push(mesh);
+    return mesh;
+}
+
+function createObjects() {
+    addSceneObject(new THREE.BoxGeometry(2, 2, 2), { x: -4, y: 1, z: 0 }, "Cube");
+    addSceneObject(new THREE.SphereGeometry(1.5, 32, 16), { x: 4, y: 1.5, z: 0 }, "Sphere");
+
+    // Пирамида (BufferGeometry)
+    const vertices = new Float32Array([
+        // Основание
+        -1, 0, -1, 1, 0, -1, 1, 0, 1, -1, 0, -1, 1, 0, 1, -1, 0, 1,
+        // Грани
+        -1, 0, -1, 1, 0, -1, 0, 3, 0, 1, 0, -1, 1, 0, 1, 0, 3, 0,
+        1, 0, 1, -1, 0, 1, 0, 3, 0, -1, 0, 1, -1, 0, -1, 0, 3, 0
+    ]);
+    const pyramidGeo = new THREE.BufferGeometry();
+    pyramidGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
+    pyramidGeo.computeVertexNormals();
+    addSceneObject(pyramidGeo, { x: 0, y: 0, z: 4 }, "Pyramid");
+
+    // Пол
+    const plane = new THREE.Mesh(
+        new THREE.PlaneGeometry(50, 50),
+        new THREE.MeshLambertMaterial({ color: CONFIG.colors.floor, side: THREE.DoubleSide })
+    );
+    plane.rotation.x = -Math.PI / 2;
+    plane.position.y = -0.1;
+    state.scene.add(plane);
+
+    updateObjectList();
+    selectObject(state.objects[0]);
+}
+
+// Настройка камер и рендереров
+function setupViewports() {
+    const cams = {
+        top: { ortho: true, pos: [0, 20, 0], target: [0, 0, 0] },
+        front: { ortho: true, pos: [0, 0, 20], target: [0, 0, 0] },
+        right: { ortho: true, pos: [20, 0, 0], target: [0, 0, 0] },
+        persp: { ortho: false, pos: [15, 15, 15], target: [0, 0, 0] }
+    };
+
+    Object.entries(cams).forEach(([key, cfg]) => {
+        state.cameras[key] = cfg.ortho
+            ? createOrthoCamera(CONFIG.frustumSize)
+            : new THREE.PerspectiveCamera(45, 1, 1, 1000);
+
+        state.cameras[key].position.set(...cfg.pos);
+        state.cameras[key].lookAt(...cfg.target);
+
+        const container = document.getElementById(`view-${key === 'persp' ? 'persp' : key}`);
+        const renderer = new THREE.WebGLRenderer({ antialias: true });
+        renderer.setSize(container.clientWidth, container.clientHeight);
+        container.appendChild(renderer.domElement);
+
+        state.renderers[key] = renderer;
+
+        if (key === 'persp') {
+            state.controls = new OrbitControls(state.cameras.persp, renderer.domElement);
+            state.controls.enableDamping = true;
+        }
+    });
+}
+
+function createOrthoCamera(size) {
+    const aspect = 1;
+    return new THREE.OrthographicCamera(
+        -size * aspect / 2, size * aspect / 2,
+        size / 2, -size / 2,
+        1, 1000
+    );
+}
+
+// Обработчики событий
+function setupEvents() {
+    window.addEventListener('resize', onResize);
+    document.addEventListener('keydown', onKeyDown);
+    document.getElementById('objectSelect').onchange = e =>
+        selectObject(state.objects.find(o => o.uuid === e.target.value));
+    document.getElementById('colorPicker').oninput = e =>
+        state.selected && state.selected.material.color.set(e.target.value);
+}
+
+// Маппинг клавиш: +/- для оси Y
+const keyMap = {
+    'ArrowLeft': { axis: 'x', dir: -1 },
+    'ArrowRight': { axis: 'x', dir: 1 },
+    'ArrowUp': { axis: 'z', dir: -1 },
+    'ArrowDown': { axis: 'z', dir: 1 },
+    '+': { axis: 'y', dir: 1 },   // Вверх
+    '-': { axis: 'y', dir: -1 }    // Вниз
+};
+
+function onKeyDown(e) {
+    const tag = document.activeElement?.tagName?.toLowerCase();
+    if (['input', 'select', 'textarea'].includes(tag) || !state.selected) return;
+
+    const move = keyMap[e.key] || keyMap[e.code];
+
+    if (move) {
+        state.selected.position[move.axis] += CONFIG.step * move.dir;
+        e.preventDefault();
+        e.stopPropagation();
+    }
+}
+
+// Обновление списка объектов в UI
+function updateObjectList() {
+    const select = document.getElementById('objectSelect');
+    select.innerHTML = state.objects.map(o =>
+        `<option value="${o.uuid}">${o.name}</option>`
+    ).join('');
+}
+
+// Выбор объекта
+function selectObject(obj) {
+    state.selected = obj;
+    document.getElementById('objectSelect').value = obj?.uuid;
+    document.getElementById('colorPicker').value = obj
+        ? '#' + obj.material.color.getHexString()
+        : '#ff0000';
+}
+
+// Обработка изменения размера окна
+function onResize() {
+    Object.entries(state.renderers).forEach(([key, renderer]) => {
+        const container = document.getElementById(`view-${key === 'persp' ? 'persp' : key}`);
+        const camera = state.cameras[key];
+        const w = container.clientWidth, h = container.clientHeight;
+
+        renderer.setSize(w, h);
+
+        if (camera.isOrthographicCamera) {
+            const a = w / h, f = CONFIG.frustumSize;
+            camera.left = -f * a / 2; camera.right = f * a / 2;
+            camera.top = f / 2; camera.bottom = -f / 2;
+            camera.updateProjectionMatrix();
+        } else {
+            camera.aspect = w / h;
+            camera.updateProjectionMatrix();
+        }
+    });
+}
+
+// Анимационный цикл
+function animate() {
+    requestAnimationFrame(animate);
+    state.controls?.update();
+
+    Object.keys(state.renderers).forEach(key =>
+        state.renderers[key].render(state.scene, state.cameras[key])
+    );
+}
+
+init();
