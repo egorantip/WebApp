@@ -54,19 +54,18 @@ function addSceneObject(geometry, position, name) {
 
 function createObjects() {
     addSceneObject(new THREE.BoxGeometry(2, 2, 2), { x: -4, y: 1, z: 0 }, "Cube");
-    addSceneObject(new THREE.SphereGeometry(1.5, 32, 16), { x: 4, y: 1.5, z: 0 }, "Sphere");
+    addSceneObject(new THREE.SphereGeometry(1, 32, 16), { x: 4, y: 1, z: 0 }, "Sphere");
 
-    // Пирамида через BufferGeometry: массив вершин, каждые 3 числа = одна вершина (x,y,z)
-    // Каждая группа из 9 чисел = один треугольник (3 вершины)
+    // Каждые 3 числа = одна вершина (x,y,z)
     const vertices = new Float32Array([
         // Основание (2 треугольника)
         -1, 0, -1, 1, 0, -1, 1, 0, 1,
         -1, 0, -1, 1, 0, 1, -1, 0, 1,
         // Боковые грани (4 треугольника, вершина пирамиды = 0,3,0)
-        -1, 0, 1, 1, 0, 1, 0, 3, 0,   // Передняя
-        1, 0, 1, 1, 0, -1, 0, 3, 0,   // Правая
-        1, 0, -1, -1, 0, -1, 0, 3, 0, // Задняя
-        -1, 0, -1, -1, 0, 1, 0, 3, 0  // Левая
+        -1, 0, 1, 1, 0, 1, 0, 2, 0,   // Передняя
+        1, 0, 1, 1, 0, -1, 0, 2, 0,   // Правая
+        1, 0, -1, -1, 0, -1, 0, 2, 0, // Задняя
+        -1, 0, -1, -1, 0, 1, 0, 2, 0  // Левая
     ]);
     const pyramidGeo = new THREE.BufferGeometry();
     pyramidGeo.setAttribute('position', new THREE.BufferAttribute(vertices, 3));
@@ -96,21 +95,26 @@ function setupViewports() {
     };
 
     Object.entries(cams).forEach(([key, cfg]) => {
-        state.cameras[key] = cfg.ortho
-            ? createOrthoCamera(CONFIG.frustumSize)
-            : new THREE.PerspectiveCamera(45, 1, 1, 1000);
-
-        state.cameras[key].position.set(...cfg.pos);
-        state.cameras[key].lookAt(...cfg.target);
-
         const container = document.getElementById(`view-${key}`);
         if (!container) {
             console.error(`Container view-${key} not found`);
             return;
         }
 
+        // Получаем реальные размеры контейнера
+        const w = container.clientWidth;
+        const h = container.clientHeight;
+
+        // Создаём камеру
+        state.cameras[key] = cfg.ortho
+            ? createOrthoCamera(CONFIG.frustumSize, w, h)
+            : new THREE.PerspectiveCamera(45, w / h, 1, 1000);
+
+        state.cameras[key].position.set(...cfg.pos);
+        state.cameras[key].lookAt(...cfg.target);
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
-        renderer.setSize(container.clientWidth, container.clientHeight);
+        renderer.setSize(w, h);
         container.appendChild(renderer.domElement);
 
         state.renderers[key] = renderer;
@@ -122,14 +126,13 @@ function setupViewports() {
     });
 }
 
-
 // Ортографическая камера: нет перспективы, параллельные линии не сходятся
-function createOrthoCamera(size) {
-    const aspect = 1;
+function createOrthoCamera(size, width, height) {
+    const aspect = width / height;
     return new THREE.OrthographicCamera(
         -size * aspect / 2, size * aspect / 2,  // left, right
-        size / 2, -size / 2,                     // top, bottom (важно: top > bottom)
-        1, 1000                                  // near, far — диапазон видимости
+        size / 2, -size / 2,                     // top, bottom
+        1, 1000
     );
 }
 
