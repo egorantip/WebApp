@@ -142,7 +142,7 @@ function setupEvents() {
 
     // При смене объекта в списке — выбираем его и обновляем цвет в пикере
     document.getElementById('objectSelect').onchange = e =>
-        selectObject(state.objects.find(o => o.uuid === e.target.value));
+        selectObject(state.objects.find(o => o.id === e.target.value));
 
     // При изменении цвета — применяем к выбранному объекту
     document.getElementById('colorPicker').oninput = e =>
@@ -177,15 +177,15 @@ function onKeyDown(e) {
 
 function updateObjectList() {
     const select = document.getElementById('objectSelect');
-    // Генерируем <option> для каждого объекта, используя uuid как уникальный value
+    // Генерируем <option> для каждого объекта, используя id как уникальный value
     select.innerHTML = state.objects.map(o =>
-        `<option value="${o.uuid}">${o.name}</option>`
+        `<option value="${o.id}">${o.name}</option>`
     ).join('');
 }
 
 function selectObject(obj) {
     state.selected = obj;
-    document.getElementById('objectSelect').value = obj?.uuid;
+    document.getElementById('objectSelect').value = obj?.id;
     // getHexString() возвращает цвет без "#"
     document.getElementById('colorPicker').value = obj
         ? '#' + obj.material.color.getHexString()
