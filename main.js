@@ -88,7 +88,6 @@ function createObjects() {
 }
 
 function setupViewports() {
-    // Конфигурация 4 камер: ortho — для проекций, persp — для 3D-вида
     const cams = {
         top: { ortho: true, pos: [0, 20, 0], target: [0, 0, 0] },
         front: { ortho: true, pos: [0, 0, 20], target: [0, 0, 0] },
@@ -97,28 +96,32 @@ function setupViewports() {
     };
 
     Object.entries(cams).forEach(([key, cfg]) => {
-        // Создаём ортографическую или перспективную камеру
         state.cameras[key] = cfg.ortho
             ? createOrthoCamera(CONFIG.frustumSize)
             : new THREE.PerspectiveCamera(45, 1, 1, 1000);
 
-        state.cameras[key].position.set(...cfg.pos);  // ...распаковывает массив [x,y,z]
+        state.cameras[key].position.set(...cfg.pos);
         state.cameras[key].lookAt(...cfg.target);
 
-        const container = document.getElementById(`view-${key === 'persp' ? 'persp' : key}`);
+        const container = document.getElementById(`view-${key}`);
+        if (!container) {
+            console.error(`Container view-${key} not found`);
+            return;
+        }
+
         const renderer = new THREE.WebGLRenderer({ antialias: true });
         renderer.setSize(container.clientWidth, container.clientHeight);
-        container.appendChild(renderer.domElement);  // domElement — это canvas
+        container.appendChild(renderer.domElement);
 
         state.renderers[key] = renderer;
 
-        // OrbitControls подключаем только к перспективной камере
         if (key === 'persp') {
             state.controls = new OrbitControls(state.cameras.persp, renderer.domElement);
-            state.controls.enableDamping = true;  // Плавное торможение при вращении
+            state.controls.enableDamping = true;
         }
     });
 }
+
 
 // Ортографическая камера: нет перспективы, параллельные линии не сходятся
 function createOrthoCamera(size) {
@@ -188,18 +191,19 @@ function selectObject(obj) {
 
 function onResize() {
     Object.entries(state.renderers).forEach(([key, renderer]) => {
-        const container = document.getElementById(`view-${key === 'persp' ? 'persp' : key}`);
+        const container = document.getElementById(`view-${key}`);
+        if (!container) return;
+
         const camera = state.cameras[key];
         const w = container.clientWidth, h = container.clientHeight;
 
         renderer.setSize(w, h);
 
-        // Для ортографических камер нужно пересчитать границы при изменении пропорций окна
         if (camera.isOrthographicCamera) {
             const a = w / h, f = CONFIG.frustumSize;
             camera.left = -f * a / 2; camera.right = f * a / 2;
             camera.top = f / 2; camera.bottom = -f / 2;
-            camera.updateProjectionMatrix();  // Применяем изменения к матрице проекции
+            camera.updateProjectionMatrix();
         } else {
             camera.aspect = w / h;
             camera.updateProjectionMatrix();
