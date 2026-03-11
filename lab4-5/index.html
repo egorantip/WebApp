@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="ru">
+
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Voxel Editor</title>
+
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
+
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
+</head>
+
+<body>
+
+  <div id="app-wrap">
+
+    <!-- Toolbar -->
+    <div id="toolbar">
+      <button id="btn-sculpt" class="nes-btn is-primary">Sculpt</button>
+      <button id="btn-paint" class="nes-btn">Paint</button>
+
+      <div class="toolbar-separator"></div>
+      <input type="color" id="color-picker" value="#e04040" title="Paint color">
+      <div class="toolbar-separator"></div>
+
+      <button id="btn-clear" class="nes-btn is-error">Clear</button>
+
+      <span id="mode-label">Sculpt: LMB draw / RMB erase</span>
+      <span id="voxel-count"></span>
+    </div>
+
+    <!-- Four panels -->
+    <div id="panels">
+
+      <div class="panel">
+        <span class="panel-label">Top (XZ)</span>
+        <canvas id="canvas-top"></canvas>
+      </div>
+
+      <div class="panel" id="panel-3d">
+        <span class="panel-label">3D View</span>
+        <div id="three-container"></div>
+      </div>
+
+      <div class="panel">
+        <span class="panel-label">Front (XY)</span>
+        <canvas id="canvas-front"></canvas>
+      </div>
+
+      <div class="panel">
+        <span class="panel-label">Left (ZY)</span>
+        <canvas id="canvas-left"></canvas>
+      </div>
+
+    </div>
+
+  </div>
+
+  <script type="module" src="js/main.js"></script>
+</body>
+
+</html>
