@@ -1,6 +1,11 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
+/*
+ * Face templates for a unit voxel cube (0,0,0)→(1,1,1).
+ * Each quad is 4 vertices in CCW order when viewed from outside,
+ * producing the correct outward-facing normal.
+ */
 const FACES = [
   { dir: [1, 0, 0], corners: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]] },
   { dir: [-1, 0, 0], corners: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]] },
@@ -15,8 +20,8 @@ export class Renderer3D {
     this.container = container;
     this.world = world;
     this.mesh = null;
-    this.faceMap = [];           // хранит {x,y,z} для каждой quad-грани
-    this.paintColor = '#e04040'; // начальный цвет для paint-режима
+    this.faceMap = [];
+    this.paintColor = '#e04040';
     this.mode = 'sculpt';
     this.onPainted = null;
 
@@ -56,7 +61,6 @@ export class Renderer3D {
 
     this._addAxesHelper();
 
-    // Отслеживаем изменение размера контейнера
     new ResizeObserver(() => this._onResize()).observe(this.container);
   }
 
@@ -86,39 +90,32 @@ export class Renderer3D {
     });
 
     el.addEventListener('pointerup', (e) => {
-      if (!this._dragStart || !this.mesh) return;
-
+      if (!this._dragStart) return;
       const dx = e.clientX - this._dragStart.x;
       const dy = e.clientY - this._dragStart.y;
-
-      // Если перемещение меньше 4 пикселей — считаем кликом
       if (Math.sqrt(dx * dx + dy * dy) < 4) {
         this._onPaintClick(e);
       }
-
       this._dragStart = null;
     });
   }
 
   _onPaintClick(e) {
-    if (this.mode !== 'paint') return;
+    if (this.mode !== 'paint' || !this.mesh) return;
 
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
     this.mouse.y = -((e.clientY - rect.top) / rect.height) * 2 + 1;
 
     this.raycaster.setFromCamera(this.mouse, this.camera);
-    const intersects = this.raycaster.intersectObject(this.mesh);
+    const hits = this.raycaster.intersectObject(this.mesh);
 
-    if (intersects.length > 0) {
-      // Берём первую попавшую грань
-      const faceIndex = intersects[0].faceIndex;
-      const quadIndex = Math.floor(faceIndex / 2); // каждая quad = 2 треугольника
-
-      const voxelInfo = this.faceMap[quadIndex];
-      if (voxelInfo) {
-        this.world.setColor(voxelInfo.x, voxelInfo.y, voxelInfo.z, this.paintColor);
-        this.buildMesh(); // перестраиваем меш после изменения цвета
+    if (hits.length > 0) {
+      const quadIdx = Math.floor(hits[0].faceIndex / 2);
+      const info = this.faceMap[quadIdx];
+      if (info) {
+        this.world.setColor(info.x, info.y, info.z, this.paintColor);
+        this.buildMesh();
         if (this.onPainted) this.onPainted();
       }
     }
@@ -128,14 +125,14 @@ export class Renderer3D {
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
     if (w === 0 || h === 0) return;
-
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
   }
 
+  /* ─── Mesh building with face culling ─── */
+
   buildMesh() {
-    // Очистка старого меша
     if (this.mesh) {
       this.scene.remove(this.mesh);
       this.mesh.geometry.dispose();
@@ -152,46 +149,35 @@ export class Renderer3D {
 
     const tmpColor = new THREE.Color();
 
-    let quadIndex = 0;
-
     for (let x = 0; x < s; x++) {
       for (let y = 0; y < s; y++) {
         for (let z = 0; z < s; z++) {
           if (!this.world.isActive(x, y, z)) continue;
 
-          tmpColor.set(this.world.getColor(x, y, z) || '#ffffff');
+          tmpColor.set(this.world.getColor(x, y, z));
 
           for (const face of FACES) {
             const nx = x + face.dir[0];
             const ny = y + face.dir[1];
             const nz = z + face.dir[2];
 
-            // Если соседний воксель существует → грань скрыта
             if (this.world.isActive(nx, ny, nz)) continue;
 
             const [v0, v1, v2, v3] = face.corners;
 
-            // Первый треугольник
-            this._pushTri(
-              positions, normals, colors,
+            this._pushTri(positions, normals, colors,
               v0[0] + x - half, v0[1] + y - half, v0[2] + z - half,
               v1[0] + x - half, v1[1] + y - half, v1[2] + z - half,
               v2[0] + x - half, v2[1] + y - half, v2[2] + z - half,
-              face.dir, tmpColor
-            );
+              face.dir, tmpColor);
 
-            // Второй треугольник
-            this._pushTri(
-              positions, normals, colors,
+            this._pushTri(positions, normals, colors,
               v0[0] + x - half, v0[1] + y - half, v0[2] + z - half,
               v2[0] + x - half, v2[1] + y - half, v2[2] + z - half,
               v3[0] + x - half, v3[1] + y - half, v3[2] + z - half,
-              face.dir, tmpColor
-            );
+              face.dir, tmpColor);
 
-            // Запоминаем воксель для этой грани (нужно для raycast-покраски)
             this.faceMap.push({ x, y, z });
-            quadIndex++;
           }
         }
       }
@@ -204,24 +190,20 @@ export class Renderer3D {
     geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
     geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
-    const mat = new THREE.MeshLambertMaterial({
-      vertexColors: true,
-      flatShading: true
-    });
-
+    const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mesh = new THREE.Mesh(geo, mat);
     this.scene.add(this.mesh);
   }
 
-  _pushTri(pos, nrm, col, ax, ay, az, bx, by, bz, cx, cy, cz, normal, color) {
+  _pushTri(pos, nrm, col,
+    ax, ay, az, bx, by, bz, cx, cy, cz,
+    normal, color) {
     pos.push(ax, ay, az, bx, by, bz, cx, cy, cz);
-    nrm.push(normal[0], normal[1], normal[2],
-      normal[0], normal[1], normal[2],
-      normal[0], normal[1], normal[2]);
-    col.push(color.r, color.g, color.b,
-      color.r, color.g, color.b,
-      color.r, color.g, color.b);
+    for (let i = 0; i < 3; i++) nrm.push(normal[0], normal[1], normal[2]);
+    for (let i = 0; i < 3; i++) col.push(color.r, color.g, color.b);
   }
+
+  /* ─── Animation loop ─── */
 
   _animate() {
     requestAnimationFrame(() => this._animate());
@@ -229,12 +211,8 @@ export class Renderer3D {
     this.renderer.render(this.scene, this.camera);
   }
 
-  // Публичные методы
-  setMode(mode) {
-    this.mode = mode;
-  }
+  /* ─── Public API ─── */
 
-  setPaintColor(c) {
-    this.paintColor = c;
-  }
+  setMode(mode) { this.mode = mode; }
+  setPaintColor(c) { this.paintColor = c; }
 }

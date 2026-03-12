@@ -63,15 +63,16 @@ export class Canvas2DManager {
     if (this.mode === 'sculpt') {
       this.isDrawing = true;
       this.activeView = viewName;
-      this.drawValue = (e.button === 0);  // true = добавление (ЛКМ), false = стирание (ПКМ)
+      this.drawValue = (e.button === 0);
 
       this.world.setProjectionPixel(viewName, col, row, this.drawValue);
-
       this.world.applySpaceCarving(this.drawValue ? this.paintColor : null);
 
       this.redrawAll();
       this.onUpdate();
-    } else if (this.mode === 'paint' && e.button === 0) {
+    }
+
+    else if (this.mode === 'paint' && e.button === 0) {
       this.isDrawing = true;
       this.activeView = viewName;
       this._paintAt(viewName, col, row);
@@ -83,13 +84,16 @@ export class Canvas2DManager {
     this._updateCrosshair(viewName, col, row);
 
     if (this.isDrawing && this.activeView === viewName && this._inBounds(col, row)) {
-      if (this.mode === 'sculpt') {
-        this.world.setProjectionPixel(viewName, col, row, this.drawValue);
 
+      if (this.mode === 'sculpt') {
+
+        this.world.setProjectionPixel(viewName, col, row, this.drawValue);
         this.world.applySpaceCarving(this.drawValue ? this.paintColor : null);
 
         this.onUpdate();
-      } else if (this.mode === 'paint') {
+      }
+
+      else if (this.mode === 'paint') {
         this._paintAt(viewName, col, row);
       }
     }
@@ -120,10 +124,14 @@ export class Canvas2DManager {
     if (viewName === 'front') {
       this.crosshair.x = col;
       this.crosshair.y = s - 1 - row;
-    } else if (viewName === 'top') {
+    }
+
+    else if (viewName === 'top') {
       this.crosshair.x = col;
       this.crosshair.z = row;
-    } else if (viewName === 'left') {
+    }
+
+    else if (viewName === 'left') {
       this.crosshair.z = col;
       this.crosshair.y = s - 1 - row;
     }
@@ -131,6 +139,7 @@ export class Canvas2DManager {
 
   _paintAt(viewName, col, row) {
     const v = this.world.getFirstVisible(viewName, col, row);
+
     if (v) {
       this.world.setColor(v.x, v.y, v.z, this.paintColor);
       this.redrawAll();
@@ -147,6 +156,7 @@ export class Canvas2DManager {
   }
 
   _drawView(viewName) {
+
     const { ctx, canvas } = this.views[viewName];
     const s = this.world.size;
     const cell = this.cellSize;
@@ -158,23 +168,14 @@ export class Canvas2DManager {
 
     for (let col = 0; col < s; col++) {
       for (let row = 0; row < s; row++) {
-        let fillColor = null;
 
-        if (this.mode === 'sculpt') {
-          const projColor = this.world.getProjectionColor(viewName, col, row);
-          if (projColor) {
-            fillColor = projColor;
-          } else if (this.world.getProjectionPixel(viewName, col, row)) {
-            fillColor = '#4a6a4a';
-          }
-        } else {
-          fillColor = this.world.getProjectionColor(viewName, col, row);
-        }
+        const color = this.world.getProjectionColor(viewName, col, row);
 
-        if (fillColor) {
-          ctx.fillStyle = fillColor;
+        if (color) {
+          ctx.fillStyle = color;
           ctx.fillRect(col * cell, row * cell, cell, cell);
         }
+
       }
     }
 
@@ -183,27 +184,32 @@ export class Canvas2DManager {
   }
 
   _drawGrid(ctx, s, cell) {
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.08)';
+
+    ctx.strokeStyle = 'rgba(255,255,255,0.08)';
     ctx.lineWidth = 1;
 
     for (let i = 0; i <= s; i++) {
+
       const pos = i * cell;
+
       ctx.beginPath();
       ctx.moveTo(pos, 0);
       ctx.lineTo(pos, s * cell);
       ctx.stroke();
+
       ctx.beginPath();
       ctx.moveTo(0, pos);
       ctx.lineTo(s * cell, pos);
       ctx.stroke();
     }
 
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
+    ctx.strokeStyle = 'rgba(255,255,255,0.25)';
     ctx.lineWidth = 2;
     ctx.strokeRect(0, 0, s * cell, s * cell);
   }
 
   _drawCrosshairs(viewName, ctx, s, cell) {
+
     const ch = this.crosshair;
     if (ch.x === null && ch.y === null && ch.z === null) return;
 
@@ -213,16 +219,20 @@ export class Canvas2DManager {
     if (viewName === 'front') {
       if (ch.x !== null) vLine = ch.x;
       if (ch.y !== null) hLine = s - 1 - ch.y;
-    } else if (viewName === 'top') {
+    }
+
+    else if (viewName === 'top') {
       if (ch.x !== null) vLine = ch.x;
       if (ch.z !== null) hLine = ch.z;
-    } else if (viewName === 'left') {
+    }
+
+    else if (viewName === 'left') {
       if (ch.z !== null) vLine = ch.z;
       if (ch.y !== null) hLine = s - 1 - ch.y;
     }
 
     ctx.save();
-    ctx.strokeStyle = 'rgba(255, 60, 60, 0.65)';
+    ctx.strokeStyle = 'rgba(255,60,60,0.65)';
     ctx.lineWidth = 1.5;
     ctx.setLineDash([6, 4]);
 
@@ -233,6 +243,7 @@ export class Canvas2DManager {
       ctx.lineTo(x, s * cell);
       ctx.stroke();
     }
+
     if (hLine !== null) {
       const y = (hLine + 0.5) * cell;
       ctx.beginPath();
