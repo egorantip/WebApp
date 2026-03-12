@@ -7,9 +7,9 @@ export class Canvas2DManager {
     this.cellSize = 25;
 
     this.views = {
-      front: { canvas: canvases.front, ctx: canvases.front.getContext('2d'), label: 'Front (XY)' },
-      top: { canvas: canvases.top, ctx: canvases.top.getContext('2d'), label: 'Top (XZ)' },
-      left: { canvas: canvases.left, ctx: canvases.left.getContext('2d'), label: 'Left (ZY)' }
+      front: { canvas: canvases.front, ctx: canvases.front.getContext('2d') },
+      top: { canvas: canvases.top, ctx: canvases.top.getContext('2d') },
+      left: { canvas: canvases.left, ctx: canvases.left.getContext('2d') }
     };
 
     this.crosshair = { x: null, y: null, z: null };
@@ -33,6 +33,7 @@ export class Canvas2DManager {
   _bindEvents() {
     for (const viewName of ['front', 'top', 'left']) {
       const canvas = this.views[viewName].canvas;
+
       canvas.addEventListener('mousedown', (e) => this._onMouseDown(e, viewName));
       canvas.addEventListener('mousemove', (e) => this._onMouseMove(e, viewName));
       canvas.addEventListener('mouseup', () => this._onMouseUp());
@@ -44,10 +45,13 @@ export class Canvas2DManager {
   _getGridCoords(e, viewName) {
     const canvas = this.views[viewName].canvas;
     const rect = canvas.getBoundingClientRect();
+
     const scaleX = canvas.width / rect.width;
     const scaleY = canvas.height / rect.height;
+
     const col = Math.floor((e.clientX - rect.left) * scaleX / this.cellSize);
     const row = Math.floor((e.clientY - rect.top) * scaleY / this.cellSize);
+
     return { col, row };
   }
 
@@ -57,39 +61,35 @@ export class Canvas2DManager {
 
   _onMouseDown(e, viewName) {
     e.preventDefault();
+
     const { col, row } = this._getGridCoords(e, viewName);
     if (!this._inBounds(col, row)) return;
 
+    this.isDrawing = true;
+    this.activeView = viewName;
+    this.drawValue = (e.button === 0);
+
     if (this.mode === 'sculpt') {
-      this.isDrawing = true;
-      this.activeView = viewName;
-      this.drawValue = (e.button === 0);
-
-      this.world.setProjectionPixel(viewName, col, row, this.drawValue);
-      this.world.applySpaceCarving(this.drawValue ? this.paintColor : null);
-
-      this.redrawAll();
-      this.onUpdate();
+      this._sculptVoxel(viewName, col, row, this.drawValue);
     }
 
     else if (this.mode === 'paint' && e.button === 0) {
-      this.isDrawing = true;
-      this.activeView = viewName;
       this._paintAt(viewName, col, row);
     }
+
+    this.redrawAll();
+    this.onUpdate();
   }
 
   _onMouseMove(e, viewName) {
+
     const { col, row } = this._getGridCoords(e, viewName);
     this._updateCrosshair(viewName, col, row);
 
     if (this.isDrawing && this.activeView === viewName && this._inBounds(col, row)) {
 
       if (this.mode === 'sculpt') {
-
-        this.world.setProjectionPixel(viewName, col, row, this.drawValue);
-        this.world.applySpaceCarving(this.drawValue ? this.paintColor : null);
-
+        this._sculptVoxel(viewName, col, row, this.drawValue);
         this.onUpdate();
       }
 
@@ -111,11 +111,91 @@ export class Canvas2DManager {
       this.isDrawing = false;
       this.activeView = null;
     }
+
     this.crosshair = { x: null, y: null, z: null };
     this.redrawAll();
   }
 
+  _sculptVoxel(view, col, row, add) {
+
+    const s = this.world.size;
+
+    if (view === 'front') {
+
+      const x = col;
+      const y = s - 1 - row;
+
+      if (add) {
+
+        for (let z = s - 1; z >= 0; z--) {
+          if (!this.world.active[x][y][z]) {
+            this.world.active[x][y][z] = true;
+            this.world.setColor(x, y, z, this.paintColor);
+            break;
+          }
+        }
+
+      } else {
+
+        const v = this.world.getFirstVisible('front', col, row);
+        if (v) this.world.active[v.x][v.y][v.z] = false;
+
+      }
+
+    }
+
+    else if (view === 'top') {
+
+      const x = col;
+      const z = row;
+
+      if (add) {
+
+        for (let y = s - 1; y >= 0; y--) {
+          if (!this.world.active[x][y][z]) {
+            this.world.active[x][y][z] = true;
+            this.world.setColor(x, y, z, this.paintColor);
+            break;
+          }
+        }
+
+      } else {
+
+        const v = this.world.getFirstVisible('top', col, row);
+        if (v) this.world.active[v.x][v.y][v.z] = false;
+
+      }
+
+    }
+
+    else if (view === 'left') {
+
+      const z = col;
+      const y = s - 1 - row;
+
+      if (add) {
+
+        for (let x = 0; x < s; x++) {
+          if (!this.world.active[x][y][z]) {
+            this.world.active[x][y][z] = true;
+            this.world.setColor(x, y, z, this.paintColor);
+            break;
+          }
+        }
+
+      } else {
+
+        const v = this.world.getFirstVisible('left', col, row);
+        if (v) this.world.active[v.x][v.y][v.z] = false;
+
+      }
+
+    }
+
+  }
+
   _updateCrosshair(viewName, col, row) {
+
     const s = this.world.size;
     this.crosshair = { x: null, y: null, z: null };
 
@@ -138,18 +218,17 @@ export class Canvas2DManager {
   }
 
   _paintAt(viewName, col, row) {
+
     const v = this.world.getFirstVisible(viewName, col, row);
 
     if (v) {
       this.world.setColor(v.x, v.y, v.z, this.paintColor);
-      this.redrawAll();
       this.onUpdate();
     }
   }
 
-  /* ─── Drawing ─── */
-
   redrawAll() {
+
     this._drawView('front');
     this._drawView('top');
     this._drawView('left');
@@ -180,7 +259,6 @@ export class Canvas2DManager {
     }
 
     this._drawGrid(ctx, s, cell);
-    this._drawCrosshairs(viewName, ctx, s, cell);
   }
 
   _drawGrid(ctx, s, cell) {
@@ -208,55 +286,6 @@ export class Canvas2DManager {
     ctx.strokeRect(0, 0, s * cell, s * cell);
   }
 
-  _drawCrosshairs(viewName, ctx, s, cell) {
-
-    const ch = this.crosshair;
-    if (ch.x === null && ch.y === null && ch.z === null) return;
-
-    let vLine = null;
-    let hLine = null;
-
-    if (viewName === 'front') {
-      if (ch.x !== null) vLine = ch.x;
-      if (ch.y !== null) hLine = s - 1 - ch.y;
-    }
-
-    else if (viewName === 'top') {
-      if (ch.x !== null) vLine = ch.x;
-      if (ch.z !== null) hLine = ch.z;
-    }
-
-    else if (viewName === 'left') {
-      if (ch.z !== null) vLine = ch.z;
-      if (ch.y !== null) hLine = s - 1 - ch.y;
-    }
-
-    ctx.save();
-    ctx.strokeStyle = 'rgba(255,60,60,0.65)';
-    ctx.lineWidth = 1.5;
-    ctx.setLineDash([6, 4]);
-
-    if (vLine !== null) {
-      const x = (vLine + 0.5) * cell;
-      ctx.beginPath();
-      ctx.moveTo(x, 0);
-      ctx.lineTo(x, s * cell);
-      ctx.stroke();
-    }
-
-    if (hLine !== null) {
-      const y = (hLine + 0.5) * cell;
-      ctx.beginPath();
-      ctx.moveTo(0, y);
-      ctx.lineTo(s * cell, y);
-      ctx.stroke();
-    }
-
-    ctx.restore();
-  }
-
-  /* ─── Public API ─── */
-
   setMode(mode) {
     this.mode = mode;
     this.isDrawing = false;
@@ -268,7 +297,7 @@ export class Canvas2DManager {
   }
 
   clear() {
-    this.world.clearAll();
+    this.world.active = this.world._create3D(false);
     this.redrawAll();
     this.onUpdate();
   }

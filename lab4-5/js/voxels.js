@@ -4,9 +4,9 @@ export class VoxelWorld {
     this.defaultColor = '#58a858';
 
     this.projections = {
-      front: this._create2D(true),
-      top: this._create2D(true),
-      left: this._create2D(true)
+      front: this._create2D(false),
+      top: this._create2D(false),
+      left: this._create2D(false)
     };
 
     this.colors = this._create3D(this.defaultColor);
@@ -40,10 +40,6 @@ export class VoxelWorld {
     return a;
   }
 
-  /**
-   * Space Carving
-   * если voxel появляется впервые — назначаем ему цвет
-   */
   applySpaceCarving(color = null) {
     const s = this.size;
 
@@ -60,7 +56,6 @@ export class VoxelWorld {
 
           this.active[x][y][z] = newState;
 
-          // если voxel появился — назначаем цвет
           if (newState && !oldState && color) {
             this.colors[x][y][z] = color;
           }
@@ -70,8 +65,51 @@ export class VoxelWorld {
   }
 
   setProjectionPixel(view, col, row, value) {
+
     if (col < 0 || col >= this.size || row < 0 || row >= this.size) return;
+
     this.projections[view][col][row] = value;
+
+    if (!value) return;
+
+    const s = this.size;
+
+    if (view === 'front') {
+
+      const x = col;
+      const y = s - 1 - row;
+
+      for (let z = 0; z < s; z++) {
+        this.projections.top[x][z] = true;
+        this.projections.left[z][s - 1 - y] = true;
+      }
+
+    }
+
+    else if (view === 'top') {
+
+      const x = col;
+      const z = row;
+
+      for (let y = 0; y < s; y++) {
+        this.projections.front[x][s - 1 - y] = true;
+        this.projections.left[z][s - 1 - y] = true;
+      }
+
+    }
+
+    else if (view === 'left') {
+
+      const z = col;
+      const y = s - 1 - row;
+
+      for (let x = 0; x < s; x++) {
+        this.projections.front[x][s - 1 - y] = true;
+        this.projections.top[x][z] = true;
+      }
+
+    }
+
   }
 
   getProjectionPixel(view, col, row) {
@@ -96,35 +134,42 @@ export class VoxelWorld {
   }
 
   getFirstVisible(view, col, row) {
+
     const s = this.size;
 
     if (col < 0 || col >= s || row < 0 || row >= s) return null;
 
     if (view === 'front') {
+
       const x = col;
       const y = s - 1 - row;
 
       for (let z = s - 1; z >= 0; z--) {
         if (this.active[x][y][z]) return { x, y, z };
       }
+
     }
 
     else if (view === 'top') {
+
       const x = col;
       const z = row;
 
       for (let y = s - 1; y >= 0; y--) {
         if (this.active[x][y][z]) return { x, y, z };
       }
+
     }
 
     else if (view === 'left') {
+
       const z = col;
       const y = s - 1 - row;
 
       for (let x = 0; x < s; x++) {
         if (this.active[x][y][z]) return { x, y, z };
       }
+
     }
 
     return null;
@@ -136,22 +181,23 @@ export class VoxelWorld {
   }
 
   clearAll() {
+
     const s = this.size;
 
     for (let i = 0; i < s; i++) {
       for (let j = 0; j < s; j++) {
-        this.projections.front[i][j] = true;
-        this.projections.top[i][j] = true;
-        this.projections.left[i][j] = true;
+        this.projections.front[i][j] = false;
+        this.projections.top[i][j] = false;
+        this.projections.left[i][j] = false;
       }
     }
 
     this.colors = this._create3D(this.defaultColor);
-
     this.applySpaceCarving();
   }
 
   countActiveVoxels() {
+
     let n = 0;
     const s = this.size;
 
