@@ -11,7 +11,7 @@ export class VoxelWorld {
 
     this.colors = this._create3D(this.defaultColor);
     this.active = this._create3D(false);
-    this.applySpaceCarving();
+    this.applySpaceCarving(); // начальная инициализация без цвета
   }
 
   _create2D(value) {
@@ -43,12 +43,9 @@ export class VoxelWorld {
    * Space Carving: voxel (x,y,z) exists iff it is filled
    * in ALL three 2D projections simultaneously.
    *
-   * Projection coordinate mapping:
-   *   front[col][row] — col = X, row 0 = top of canvas = Y = size-1
-   *   top[col][row]   — col = X, row 0 = top of canvas = Z = 0
-   *   left[col][row]  — col = Z, row 0 = top of canvas = Y = size-1
+   @param {string|null} currentPaintColor - цвет из UI, применяется к новым вокселям
    */
-  applySpaceCarving() {
+  applySpaceCarving(currentPaintColor = null) {
     const s = this.size;
     for (let x = 0; x < s; x++) {
       for (let y = 0; y < s; y++) {
@@ -56,7 +53,19 @@ export class VoxelWorld {
           const frontFilled = this.projections.front[x][s - 1 - y];
           const topFilled = this.projections.top[x][z];
           const leftFilled = this.projections.left[z][s - 1 - y];
-          this.active[x][y][z] = frontFilled && topFilled && leftFilled;
+
+          const shouldBeActive = frontFilled && topFilled && leftFilled;
+
+          // Если воксель только что появился
+          if (shouldBeActive && !this.active[x][y][z]) {
+            // Если передан цвет из UI используем его для нового вокселя
+            if (currentPaintColor) {
+              this.colors[x][y][z] = currentPaintColor;
+            }
+            // иначе сохраняем предыдущий цвет (важно при восстановлении после стирания)
+          }
+
+          this.active[x][y][z] = shouldBeActive;
         }
       }
     }
@@ -86,7 +95,6 @@ export class VoxelWorld {
   setColor(x, y, z, color) {
     this.colors[x][y][z] = color;
   }
-
 
   getFirstVisible(view, col, row) {
     const s = this.size;

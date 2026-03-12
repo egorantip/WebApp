@@ -63,9 +63,12 @@ export class Canvas2DManager {
     if (this.mode === 'sculpt') {
       this.isDrawing = true;
       this.activeView = viewName;
-      this.drawValue = (e.button === 0);
+      this.drawValue = (e.button === 0);  // true = добавление (ЛКМ), false = стирание (ПКМ)
+
       this.world.setProjectionPixel(viewName, col, row, this.drawValue);
-      this.world.applySpaceCarving();
+
+      this.world.applySpaceCarving(this.drawValue ? this.paintColor : null);
+
       this.redrawAll();
       this.onUpdate();
     } else if (this.mode === 'paint' && e.button === 0) {
@@ -82,7 +85,9 @@ export class Canvas2DManager {
     if (this.isDrawing && this.activeView === viewName && this._inBounds(col, row)) {
       if (this.mode === 'sculpt') {
         this.world.setProjectionPixel(viewName, col, row, this.drawValue);
-        this.world.applySpaceCarving();
+
+        this.world.applySpaceCarving(this.drawValue ? this.paintColor : null);
+
         this.onUpdate();
       } else if (this.mode === 'paint') {
         this._paintAt(viewName, col, row);
@@ -153,17 +158,22 @@ export class Canvas2DManager {
 
     for (let col = 0; col < s; col++) {
       for (let row = 0; row < s; row++) {
+        let fillColor = null;
+
         if (this.mode === 'sculpt') {
-          if (this.world.getProjectionPixel(viewName, col, row)) {
-            ctx.fillStyle = '#4a6a4a';
-            ctx.fillRect(col * cell, row * cell, cell, cell);
+          const projColor = this.world.getProjectionColor(viewName, col, row);
+          if (projColor) {
+            fillColor = projColor;
+          } else if (this.world.getProjectionPixel(viewName, col, row)) {
+            fillColor = '#4a6a4a';
           }
         } else {
-          const color = this.world.getProjectionColor(viewName, col, row);
-          if (color) {
-            ctx.fillStyle = color;
-            ctx.fillRect(col * cell, row * cell, cell, cell);
-          }
+          fillColor = this.world.getProjectionColor(viewName, col, row);
+        }
+
+        if (fillColor) {
+          ctx.fillStyle = fillColor;
+          ctx.fillRect(col * cell, row * cell, cell, cell);
         }
       }
     }
