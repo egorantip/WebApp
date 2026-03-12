@@ -1,18 +1,13 @@
 import * as THREE from 'three';
 import { OrbitControls } from 'three/addons/controls/OrbitControls.js';
 
-/*
- * Face templates for a unit voxel cube (0,0,0)→(1,1,1).
- * Each quad is 4 vertices in CCW order when viewed from outside,
- * producing the correct outward-facing normal.
- */
 const FACES = [
-  { dir: [ 1,  0,  0], corners: [[1,0,0],[1,1,0],[1,1,1],[1,0,1]] },
-  { dir: [-1,  0,  0], corners: [[0,0,0],[0,0,1],[0,1,1],[0,1,0]] },
-  { dir: [ 0,  1,  0], corners: [[0,1,1],[1,1,1],[1,1,0],[0,1,0]] },
-  { dir: [ 0, -1,  0], corners: [[0,0,0],[1,0,0],[1,0,1],[0,0,1]] },
-  { dir: [ 0,  0,  1], corners: [[0,0,1],[1,0,1],[1,1,1],[0,1,1]] },
-  { dir: [ 0,  0, -1], corners: [[1,0,0],[0,0,0],[0,1,0],[1,1,0]] }
+  { dir: [1, 0, 0], corners: [[1, 0, 0], [1, 1, 0], [1, 1, 1], [1, 0, 1]] },
+  { dir: [-1, 0, 0], corners: [[0, 0, 0], [0, 0, 1], [0, 1, 1], [0, 1, 0]] },
+  { dir: [0, 1, 0], corners: [[0, 1, 1], [1, 1, 1], [1, 1, 0], [0, 1, 0]] },
+  { dir: [0, -1, 0], corners: [[0, 0, 0], [1, 0, 0], [1, 0, 1], [0, 0, 1]] },
+  { dir: [0, 0, 1], corners: [[0, 0, 1], [1, 0, 1], [1, 1, 1], [0, 1, 1]] },
+  { dir: [0, 0, -1], corners: [[1, 0, 0], [0, 0, 0], [0, 1, 0], [1, 1, 0]] }
 ];
 
 export class Renderer3D {
@@ -143,8 +138,8 @@ export class Renderer3D {
     const s = this.world.size;
     const half = s / 2;
     const positions = [];
-    const normals   = [];
-    const colors    = [];
+    const normals = [];
+    const colors = [];
     this.faceMap = [];
 
     const tmpColor = new THREE.Color();
@@ -166,15 +161,15 @@ export class Renderer3D {
             const [v0, v1, v2, v3] = face.corners;
 
             this._pushTri(positions, normals, colors,
-              v0[0]+x-half, v0[1]+y-half, v0[2]+z-half,
-              v1[0]+x-half, v1[1]+y-half, v1[2]+z-half,
-              v2[0]+x-half, v2[1]+y-half, v2[2]+z-half,
+              v0[0] + x - half, v0[1] + y - half, v0[2] + z - half,
+              v1[0] + x - half, v1[1] + y - half, v1[2] + z - half,
+              v2[0] + x - half, v2[1] + y - half, v2[2] + z - half,
               face.dir, tmpColor);
 
             this._pushTri(positions, normals, colors,
-              v0[0]+x-half, v0[1]+y-half, v0[2]+z-half,
-              v2[0]+x-half, v2[1]+y-half, v2[2]+z-half,
-              v3[0]+x-half, v3[1]+y-half, v3[2]+z-half,
+              v0[0] + x - half, v0[1] + y - half, v0[2] + z - half,
+              v2[0] + x - half, v2[1] + y - half, v2[2] + z - half,
+              v3[0] + x - half, v3[1] + y - half, v3[2] + z - half,
               face.dir, tmpColor);
 
             this.faceMap.push({ x, y, z });
@@ -187,8 +182,8 @@ export class Renderer3D {
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
-    geo.setAttribute('normal',   new THREE.Float32BufferAttribute(normals, 3));
-    geo.setAttribute('color',    new THREE.Float32BufferAttribute(colors, 3));
+    geo.setAttribute('normal', new THREE.Float32BufferAttribute(normals, 3));
+    geo.setAttribute('color', new THREE.Float32BufferAttribute(colors, 3));
 
     const mat = new THREE.MeshLambertMaterial({ vertexColors: true });
     this.mesh = new THREE.Mesh(geo, mat);
@@ -196,8 +191,8 @@ export class Renderer3D {
   }
 
   _pushTri(pos, nrm, col,
-           ax, ay, az, bx, by, bz, cx, cy, cz,
-           normal, color) {
+    ax, ay, az, bx, by, bz, cx, cy, cz,
+    normal, color) {
     pos.push(ax, ay, az, bx, by, bz, cx, cy, cz);
     for (let i = 0; i < 3; i++) nrm.push(normal[0], normal[1], normal[2]);
     for (let i = 0; i < 3; i++) col.push(color.r, color.g, color.b);
