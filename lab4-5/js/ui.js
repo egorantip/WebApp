@@ -37,14 +37,13 @@ export class UIManager {
     this.btnSculpt.className = 'nes-btn' + (isSculpt ? ' is-primary' : '');
     this.btnPaint.className = 'nes-btn' + (!isSculpt ? ' is-warning' : '');
 
-    // Цветовой пикер всегда активен
-    this.colorPicker.style.opacity = '1';
-    this.colorPicker.style.pointerEvents = 'auto';
+    this.colorPicker.style.opacity = isSculpt ? '0.35' : '1';
+    this.colorPicker.style.pointerEvents = isSculpt ? 'none' : 'auto';
 
     if (this.modeLabel) {
       this.modeLabel.textContent = isSculpt
-        ? 'Sculpt: ЛКМ — добавить (с текущим цветом), ПКМ — стереть'
-        : 'Paint: клик по видимой грани — покрасить';
+        ? 'Sculpt: LMB draw / RMB erase'
+        : 'Paint: click to color voxels';
     }
   }
 

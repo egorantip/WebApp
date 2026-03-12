@@ -24,9 +24,6 @@ const canvas2D = new Canvas2DManager(
   onVoxelUpdate
 );
 
-// Устанавливаем начальный цвет
-canvas2D.setPaintColor('#58a858');  // или любой другой
-
 renderer3D = new Renderer3D(
   document.getElementById('three-container'),
   world

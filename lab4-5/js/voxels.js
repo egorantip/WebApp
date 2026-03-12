@@ -17,7 +17,10 @@ export class VoxelWorld {
   _create2D(value) {
     const a = [];
     for (let i = 0; i < this.size; i++) {
-      a[i] = new Array(this.size).fill(value);
+      a[i] = [];
+      for (let j = 0; j < this.size; j++) {
+        a[i][j] = value;
+      }
     }
     return a;
   }
@@ -27,13 +30,25 @@ export class VoxelWorld {
     for (let x = 0; x < this.size; x++) {
       a[x] = [];
       for (let y = 0; y < this.size; y++) {
-        a[x][y] = new Array(this.size).fill(value);
+        a[x][y] = [];
+        for (let z = 0; z < this.size; z++) {
+          a[x][y][z] = value;
+        }
       }
     }
     return a;
   }
 
-  applySpaceCarving(currentPaintColor = null) {
+  /**
+   * Space Carving: voxel (x,y,z) exists iff it is filled
+   * in ALL three 2D projections simultaneously.
+   *
+   * Projection coordinate mapping:
+   *   front[col][row] — col = X, row 0 = top of canvas = Y = size-1
+   *   top[col][row]   — col = X, row 0 = top of canvas = Z = 0
+   *   left[col][row]  — col = Z, row 0 = top of canvas = Y = size-1
+   */
+  applySpaceCarving() {
     const s = this.size;
     for (let x = 0; x < s; x++) {
       for (let y = 0; y < s; y++) {
@@ -41,16 +56,7 @@ export class VoxelWorld {
           const frontFilled = this.projections.front[x][s - 1 - y];
           const topFilled = this.projections.top[x][z];
           const leftFilled = this.projections.left[z][s - 1 - y];
-
-          const shouldBeActive = frontFilled && topFilled && leftFilled;
-
-          if (shouldBeActive && !this.active[x][y][z]) {
-            if (currentPaintColor) {
-              this.colors[x][y][z] = currentPaintColor;
-            }
-          }
-
-          this.active[x][y][z] = shouldBeActive;
+          this.active[x][y][z] = frontFilled && topFilled && leftFilled;
         }
       }
     }
@@ -67,7 +73,9 @@ export class VoxelWorld {
   }
 
   isActive(x, y, z) {
-    if (x < 0 || x >= this.size || y < 0 || y >= this.size || z < 0 || z >= this.size) return false;
+    if (x < 0 || x >= this.size ||
+      y < 0 || y >= this.size ||
+      z < 0 || z >= this.size) return false;
     return this.active[x][y][z];
   }
 
@@ -76,10 +84,9 @@ export class VoxelWorld {
   }
 
   setColor(x, y, z, color) {
-    if (this.isActive(x, y, z)) {
-      this.colors[x][y][z] = color;
-    }
+    this.colors[x][y][z] = color;
   }
+
 
   getFirstVisible(view, col, row) {
     const s = this.size;
@@ -89,19 +96,19 @@ export class VoxelWorld {
       const x = col;
       const y = s - 1 - row;
       for (let z = s - 1; z >= 0; z--) {
-        if (this.isActive(x, y, z)) return { x, y, z };
+        if (this.active[x][y][z]) return { x, y, z };
       }
     } else if (view === 'top') {
       const x = col;
       const z = row;
       for (let y = s - 1; y >= 0; y--) {
-        if (this.isActive(x, y, z)) return { x, y, z };
+        if (this.active[x][y][z]) return { x, y, z };
       }
     } else if (view === 'left') {
       const z = col;
       const y = s - 1 - row;
       for (let x = 0; x < s; x++) {
-        if (this.isActive(x, y, z)) return { x, y, z };
+        if (this.active[x][y][z]) return { x, y, z };
       }
     }
     return null;
