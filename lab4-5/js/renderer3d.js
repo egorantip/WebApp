@@ -90,7 +90,7 @@ export class Renderer3D {
     });
 
     el.addEventListener('pointerup', (e) => {
-      if (!this._dragStart) {return;}
+      if (!this._dragStart) return;
       const dx = e.clientX - this._dragStart.x;
       const dy = e.clientY - this._dragStart.y;
       if (Math.sqrt(dx * dx + dy * dy) < 4) {
@@ -101,7 +101,7 @@ export class Renderer3D {
   }
 
   _onPaintClick(e) {
-    if (this.mode !== 'paint' || !this.mesh) {return;}
+    if (this.mode !== 'paint' || !this.mesh) return;
 
     const rect = this.renderer.domElement.getBoundingClientRect();
     this.mouse.x = ((e.clientX - rect.left) / rect.width) * 2 - 1;
@@ -116,7 +116,7 @@ export class Renderer3D {
       if (info) {
         this.world.setColor(info.x, info.y, info.z, this.paintColor);
         this.buildMesh();
-        if (this.onPainted) {this.onPainted();}
+        if (this.onPainted) this.onPainted();
       }
     }
   }
@@ -124,7 +124,7 @@ export class Renderer3D {
   _onResize() {
     const w = this.container.clientWidth;
     const h = this.container.clientHeight;
-    if (w === 0 || h === 0) {return;}
+    if (w === 0 || h === 0) return;
     this.camera.aspect = w / h;
     this.camera.updateProjectionMatrix();
     this.renderer.setSize(w, h);
@@ -152,7 +152,7 @@ export class Renderer3D {
     for (let x = 0; x < s; x++) {
       for (let y = 0; y < s; y++) {
         for (let z = 0; z < s; z++) {
-          if (!this.world.isActive(x, y, z)) {continue;}
+          if (!this.world.isActive(x, y, z)) continue;
 
           tmpColor.set(this.world.getColor(x, y, z));
 
@@ -161,7 +161,7 @@ export class Renderer3D {
             const ny = y + face.dir[1];
             const nz = z + face.dir[2];
 
-            if (this.world.isActive(nx, ny, nz)) {continue;}
+            if (this.world.isActive(nx, ny, nz)) continue;
 
             const [v0, v1, v2, v3] = face.corners;
 
@@ -183,7 +183,7 @@ export class Renderer3D {
       }
     }
 
-    if (positions.length === 0) {return;}
+    if (positions.length === 0) return;
 
     const geo = new THREE.BufferGeometry();
     geo.setAttribute('position', new THREE.Float32BufferAttribute(positions, 3));
@@ -199,8 +199,8 @@ export class Renderer3D {
     ax, ay, az, bx, by, bz, cx, cy, cz,
     normal, color) {
     pos.push(ax, ay, az, bx, by, bz, cx, cy, cz);
-    for (let i = 0; i < 3; i++) {nrm.push(normal[0], normal[1], normal[2]);}
-    for (let i = 0; i < 3; i++) {col.push(color.r, color.g, color.b);}
+    for (let i = 0; i < 3; i++) nrm.push(normal[0], normal[1], normal[2]);
+    for (let i = 0; i < 3; i++) col.push(color.r, color.g, color.b);
   }
 
   /* ─── Animation loop ─── */
