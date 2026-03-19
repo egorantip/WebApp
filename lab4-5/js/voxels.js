@@ -66,11 +66,11 @@ export class VoxelWorld {
 
   setProjectionPixel(view, col, row, value) {
 
-    if (col < 0 || col >= this.size || row < 0 || row >= this.size) return;
+    if (col < 0 || col >= this.size || row < 0 || row >= this.size) {return;}
 
     this.projections[view][col][row] = value;
 
-    if (!value) return;
+    if (!value) {return;}
 
     const s = this.size;
 
@@ -113,14 +113,14 @@ export class VoxelWorld {
   }
 
   getProjectionPixel(view, col, row) {
-    if (col < 0 || col >= this.size || row < 0 || row >= this.size) return false;
+    if (col < 0 || col >= this.size || row < 0 || row >= this.size) {return false;}
     return this.projections[view][col][row];
   }
 
   isActive(x, y, z) {
     if (x < 0 || x >= this.size ||
       y < 0 || y >= this.size ||
-      z < 0 || z >= this.size) return false;
+      z < 0 || z >= this.size) {return false;}
 
     return this.active[x][y][z];
   }
@@ -137,7 +137,7 @@ export class VoxelWorld {
 
     const s = this.size;
 
-    if (col < 0 || col >= s || row < 0 || row >= s) return null;
+    if (col < 0 || col >= s || row < 0 || row >= s) {return null;}
 
     if (view === 'front') {
 
@@ -145,7 +145,7 @@ export class VoxelWorld {
       const y = s - 1 - row;
 
       for (let z = s - 1; z >= 0; z--) {
-        if (this.active[x][y][z]) return { x, y, z };
+        if (this.active[x][y][z]) {return { x, y, z };}
       }
 
     }
@@ -156,7 +156,7 @@ export class VoxelWorld {
       const z = row;
 
       for (let y = s - 1; y >= 0; y--) {
-        if (this.active[x][y][z]) return { x, y, z };
+        if (this.active[x][y][z]) {return { x, y, z };}
       }
 
     }
@@ -167,7 +167,7 @@ export class VoxelWorld {
       const y = s - 1 - row;
 
       for (let x = 0; x < s; x++) {
-        if (this.active[x][y][z]) return { x, y, z };
+        if (this.active[x][y][z]) {return { x, y, z };}
       }
 
     }
@@ -202,9 +202,9 @@ export class VoxelWorld {
     const s = this.size;
 
     for (let x = 0; x < s; x++)
-      for (let y = 0; y < s; y++)
-        for (let z = 0; z < s; z++)
-          if (this.active[x][y][z]) n++;
+      {for (let y = 0; y < s; y++)
+        {for (let z = 0; z < s; z++)
+          {if (this.active[x][y][z]) {n++;}}}}
 
     return n;
   }

@@ -63,7 +63,7 @@ export class Canvas2DManager {
     e.preventDefault();
 
     const { col, row } = this._getGridCoords(e, viewName);
-    if (!this._inBounds(col, row)) return;
+    if (!this._inBounds(col, row)) {return;}
 
     this.isDrawing = true;
     this.activeView = viewName;
@@ -138,7 +138,7 @@ export class Canvas2DManager {
       } else {
 
         const v = this.world.getFirstVisible('front', col, row);
-        if (v) this.world.active[v.x][v.y][v.z] = false;
+        if (v) {this.world.active[v.x][v.y][v.z] = false;}
 
       }
 
@@ -162,7 +162,7 @@ export class Canvas2DManager {
       } else {
 
         const v = this.world.getFirstVisible('top', col, row);
-        if (v) this.world.active[v.x][v.y][v.z] = false;
+        if (v) {this.world.active[v.x][v.y][v.z] = false;}
 
       }
 
@@ -186,7 +186,7 @@ export class Canvas2DManager {
       } else {
 
         const v = this.world.getFirstVisible('left', col, row);
-        if (v) this.world.active[v.x][v.y][v.z] = false;
+        if (v) {this.world.active[v.x][v.y][v.z] = false;}
 
       }
 
@@ -199,7 +199,7 @@ export class Canvas2DManager {
     const s = this.world.size;
     this.crosshair = { x: null, y: null, z: null };
 
-    if (!this._inBounds(col, row)) return;
+    if (!this._inBounds(col, row)) {return;}
 
     if (viewName === 'front') {
       this.crosshair.x = col;

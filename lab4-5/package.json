@@ -5,13 +5,10 @@
   "type": "module",
   "scripts": {
     "start": "npx serve .",
-    "server": "json-server --watch db.json --port 3000",
-    "dev": "concurrently \"npm run start\" \"npm run server\"",
     "lint": "eslint .",
     "lint:fix": "eslint . --fix"
   },
   "devDependencies": {
-    "eslint": "^9.0.0",
-    "json-server": "^1.0.0"
+    "eslint": "^9.x.x"
   }
 }

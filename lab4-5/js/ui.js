@@ -35,8 +35,8 @@ export class UIManager {
     const isSculpt = this.mode === 'sculpt';
 
     // Кнопки режимов
-    this.btnSculpt.className = 'nes-btn' + (isSculpt ? ' is-primary' : '');
-    this.btnPaint.className = 'nes-btn' + (!isSculpt ? ' is-warning' : '');
+    this.btnSculpt.className = `nes-btn${  isSculpt ? ' is-primary' : ''}`;
+    this.btnPaint.className = `nes-btn${  !isSculpt ? ' is-warning' : ''}`;
 
     // Цветовой пикер — ВСЕГДА активен
     if (this.colorPicker) {
