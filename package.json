@@ -1,15 +1,10 @@
 {
   "private": true,
-  "name": "backend",
+  "name": "webapp-antieg-backend",
   "version": "1.0.0",
   "type": "module",
   "scripts": {
     "dev": "node --watch ./main.js",
     "serve": "node ./main.js"
-  },
-  "devDependencies": {
-    "@eslint/js": "^10.0.1",
-    "eslint": "^10.1.0",
-    "globals": "^17.4.0"
   }
 }
