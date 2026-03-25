@@ -2,162 +2,71 @@
 <html lang="ru">
 
 <head>
-    <meta charset="UTF-8">
-    <title>3D Editor Interface</title>
-    <style>
-        body {
-            margin: 0;
-            overflow: hidden;
-            font-family: sans-serif;
-            display: flex;
-            height: 100vh;
-        }
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>3D Voxel Editor</title>
 
-        /* Панель инструментов слева */
-        #sidebar {
-            width: 250px;
-            background: #f0f0f0;
-            padding: 10px;
-            border-right: 1px solid #ccc;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            box-shadow: 2px 0 5px rgba(0, 0, 0, 0.1);
-            z-index: 10;
-        }
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <link href="https://unpkg.com/nes.css@2.3.0/css/nes.min.css" rel="stylesheet">
+  <link rel="stylesheet" href="css/style.css">
 
-        /* Область с 4 вьюпортами */
-        #viewports {
-            flex-grow: 1;
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            grid-template-rows: 1fr 1fr;
-            gap: 2px;
-            background: #333;
-        }
-
-        .viewport {
-            position: relative;
-            background: #1a1a1a;
-            overflow: hidden;
-        }
-
-        .viewport canvas {
-            display: block;
-            width: 100%;
-            height: 100%;
-        }
-
-        .label {
-            position: absolute;
-            top: 5px;
-            left: 5px;
-            color: white;
-            background: rgba(0, 0, 0, 0.5);
-            padding: 2px 6px;
-            font-size: 12px;
-            pointer-events: none;
-            user-select: none;
-        }
-
-        /* Стили элементов управления */
-        .control-group {
-            background: white;
-            padding: 10px;
-            border-radius: 4px;
-            border: 1px solid #ddd;
-        }
-
-        .control-group h3 {
-            margin-top: 0;
-            font-size: 14px;
-            margin-bottom: 10px;
-        }
-
-        select,
-        input[type="color"] {
-            width: 100%;
-            padding: 5px;
-            margin-bottom: 5px;
-        }
-
-        .info {
-            font-size: 12px;
-            color: #555;
-            line-height: 1.4;
-        }
-
-        .key-badge {
-            display: inline-block;
-            background: #eee;
-            border: 1px solid #ccc;
-            border-radius: 3px;
-            padding: 1px 4px;
-            font-family: monospace;
-            font-size: 11px;
-        }
-    </style>
-
-    <!-- Карта импортов -->
-    <script type="importmap">
-        {
-            "imports": {
-                "three": "./three.module.js",
-                "three/addons/": "./"
-            }
-        }
-    </script>
+  <script type="importmap">
+  {
+    "imports": {
+      "three": "https://unpkg.com/three@0.160.0/build/three.module.js",
+      "three/addons/": "https://unpkg.com/three@0.160.0/examples/jsm/"
+    }
+  }
+  </script>
 </head>
 
 <body>
 
-    <!-- Панель управления -->
-    <div id="sidebar">
-        <h2>3D Editor</h2>
+  <div id="app-wrap">
 
-        <div class="control-group">
-            <h3>Объект</h3>
-            <label for="objectSelect">Выбрать:</label>
-            <select id="objectSelect">
-                <!-- Опции добавятся через JS -->
-            </select>
-        </div>
+    <!-- Toolbar -->
+    <div id="toolbar">
+      <button id="btn-sculpt" class="nes-btn is-primary">Sculpt</button>
+      <button id="btn-paint" class="nes-btn">Paint</button>
 
-        <div class="control-group">
-            <h3>Цвет материала</h3>
-            <input type="color" id="colorPicker" value="#ff0000">
-        </div>
+      <div class="toolbar-separator"></div>
+      <input type="color" id="color-picker" value="#e04040" title="Paint color">
+      <div class="toolbar-separator"></div>
 
-        <div class="control-group">
-            <h3>Управление</h3>
-            <div class="info">
-                <p><span class="key-badge">↑</span> <span class="key-badge">↓</span> <span class="key-badge">←</span>
-                    <span class="key-badge">→</span> : Перемещение (X/Z)
-                </p>
-                <p><span class="key-badge">+</span> <span class="key-badge">-</span> : Высота (Y)</p>
-                <p><i>ЛКМ + Драг</i> в правом нижнем окне: Вращение камеры</p>
-            </div>
-        </div>
+      <button id="btn-clear" class="nes-btn is-error">Clear</button>
+
+      <span id="mode-label">Sculpt: LMB draw / RMB erase</span>
+      <span id="voxel-count"></span>
     </div>
 
-    <!-- 4 Окна просмотра -->
-    <div id="viewports">
-        <div class="viewport" id="view-top">
-            <div class="label">Top Orthographic</div>
-        </div>
-        <div class="viewport" id="view-persp">
-            <div class="label">User Perspective</div>
-        </div>
-        <div class="viewport" id="view-front">
-            <div class="label">Front Orthographic</div>
-        </div>
-        <div class="viewport" id="view-right">
-            <div class="label">Right Orthographic</div>
-        </div>
+    <!-- Four panels -->
+    <div id="panels">
+
+      <div class="panel">
+        <span class="panel-label">Top (XZ)</span>
+        <canvas id="canvas-top"></canvas>
+      </div>
+
+      <div class="panel" id="panel-3d">
+        <span class="panel-label">3D View</span>
+        <div id="three-container"></div>
+      </div>
+
+      <div class="panel">
+        <span class="panel-label">Front (XY)</span>
+        <canvas id="canvas-front"></canvas>
+      </div>
+
+      <div class="panel">
+        <span class="panel-label">Left (ZY)</span>
+        <canvas id="canvas-left"></canvas>
+      </div>
+
     </div>
 
-    <!-- Основной скрипт как модуль -->
-    <script type="module" src="main.js"></script>
+  </div>
+
+  <script type="module" src="js/main.js"></script>
 </body>
 
 </html>
