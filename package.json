@@ -6,5 +6,8 @@
   "scripts": {
     "dev": "node --watch ./main.js",
     "serve": "node ./main.js"
+  },
+  "dependencies": {
+    "autocannon": "^8.0.0"
   }
 }

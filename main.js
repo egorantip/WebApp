@@ -11,8 +11,8 @@ const PORT = 3000;
 const HOST = 'localhost';
 const DB_FILE = path.join(__dirname, 'db.json');
 
-// Путь к frontend вне WebApp-Antieg
 const FRONTEND_DIR = path.resolve(__dirname, '..', 'frontend');
+const TEMPLATES_DIR = path.join(__dirname, 'templates');
 
 let db = { models: [] };
 
@@ -39,6 +39,81 @@ async function saveDB() {
     }
 }
 
+// ====================== Вспомогательные функции ======================
+
+async function sendFile(res, filePath, contentType = 'application/octet-stream', encoding = null) {
+    try {
+        const fileStat = await stat(filePath);
+        if (!fileStat.isFile()) throw new Error('Not a file');
+
+        let content = encoding ? await readFile(filePath, encoding) : await readFile(filePath);
+        res.setHeader('Content-Type', contentType);
+        res.setHeader('Content-Length', Buffer.byteLength(content, encoding || 'utf8'));
+        res.statusCode = 200;
+        res.end(content);
+    } catch (err) {
+        console.error(`Ошибка при чтении файла ${filePath}:`, err.message);
+        await send404(res);
+    }
+}
+
+async function sendTemplate(res, templatePath, replacements = {}) {
+    try {
+        await stat(templatePath);
+        let template = await readFile(templatePath, 'utf8');
+
+        const sanitize = str =>
+            str.replace(/&/g, '&amp;')
+                .replace(/</g, '&lt;')
+                .replace(/>/g, '&gt;');
+
+        for (const key in replacements) {
+            const regex = new RegExp(`%%\\s*${key}\\s*%%`, 'g');
+            template = template.replace(regex, sanitize(replacements[key]));
+        }
+
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Content-Length', Buffer.byteLength(template, 'utf8'));
+        res.statusCode = 200;
+        res.end(template);
+    } catch (err) {
+        console.error(`Ошибка при чтении шаблона ${templatePath}:`, err.message);
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.end('Internal Server Error');
+    }
+}
+
+async function send404(res) {
+    try {
+        const notFoundPath = path.join(FRONTEND_DIR, '404.html');
+        const content = await readFile(notFoundPath, 'utf8');
+        res.statusCode = 404;
+        res.setHeader('Content-Type', 'text/html; charset=utf-8');
+        res.setHeader('Content-Length', Buffer.byteLength(content, 'utf8'));
+        res.end(content);
+    } catch {
+        res.statusCode = 500;
+        res.setHeader('Content-Type', 'text/plain; charset=utf-8');
+        res.end('Internal Server Error');
+    }
+}
+
+function getContentType(filePath) {
+    const ext = path.extname(filePath).toLowerCase();
+    switch (ext) {
+        case '.js': return 'application/javascript; charset=utf-8';
+        case '.css': return 'text/css; charset=utf-8';
+        case '.html': return 'text/html; charset=utf-8';
+        case '.json': return 'application/json; charset=utf-8';
+        case '.png': return 'image/png';
+        case '.jpg':
+        case '.jpeg': return 'image/jpeg';
+        case '.gif': return 'image/gif';
+        default: return 'application/octet-stream';
+    }
+}
+
 // ====================== Сервер ======================
 const server = http.createServer(async (req, res) => {
     const parsedUrl = new URL(req.url, `http://${req.headers.host}`);
@@ -55,14 +130,12 @@ const server = http.createServer(async (req, res) => {
             res.setHeader('Content-Type', 'application/json; charset=utf-8');
 
             try {
-                // GET /models или GET /models?name=...
+                // GET /models
                 if (req.method === 'GET') {
                     if (pathname === '/models') {
                         const nameFilter = parsedUrl.searchParams.get('name');
                         let result = db.models;
-                        if (nameFilter) {
-                            result = db.models.filter(m => m.name === nameFilter);
-                        }
+                        if (nameFilter) result = db.models.filter(m => m.name === nameFilter);
                         res.statusCode = 200;
                         res.end(JSON.stringify(result));
                         return;
@@ -79,21 +152,14 @@ const server = http.createServer(async (req, res) => {
 
                 // POST /models
                 if (req.method === 'POST' && pathname === '/models') {
-                    if (!body.trim()) {
-                        res.statusCode = 400;
-                        res.end(JSON.stringify({ error: 'Bad Request: тело запроса пустое' }));
-                        return;
-                    }
+                    if (!body.trim()) { res.statusCode = 400; res.end(JSON.stringify({ error: 'Bad Request: пустое тело' })); return; }
 
                     const newModel = JSON.parse(body);
                     if (!newModel.name || typeof newModel.name !== 'string') {
-                        res.statusCode = 400;
-                        res.end(JSON.stringify({ error: 'Bad Request: поле "name" обязательно и должно быть строкой' }));
-                        return;
+                        res.statusCode = 400; res.end(JSON.stringify({ error: 'Bad Request: поле name обязательно' })); return;
                     }
 
-                    // Последовательный маленький ID
-                    const lastId = db.models.length > 0 ? Math.max(...db.models.map(m => m.id)) : 0;
+                    const lastId = db.models.length ? Math.max(...db.models.map(m => m.id)) : 0;
                     newModel.id = lastId + 1;
                     db.models.push(newModel);
 
@@ -108,6 +174,7 @@ const server = http.createServer(async (req, res) => {
                     const id = Number(pathname.split('/')[2]);
                     const index = db.models.findIndex(m => m.id === id);
                     if (index === -1) { res.statusCode = 404; res.end(JSON.stringify({ error: 'Not Found' })); return; }
+
                     const update = JSON.parse(body);
                     db.models[index] = { ...db.models[index], ...update, updatedAt: new Date().toISOString() };
                     await saveDB();
@@ -136,63 +203,19 @@ const server = http.createServer(async (req, res) => {
         return;
     }
 
-    // ===== Статические файлы фронтенда =====
-    let filePath;
-    if (pathname === '/') {
-        filePath = path.join(FRONTEND_DIR, 'index.html');
-    } else {
-        filePath = path.join(FRONTEND_DIR, pathname);
-    }
-
-    try {
-        const fileStat = await stat(filePath);
-        if (!fileStat.isFile()) throw new Error('Not a file');
-
-        const ext = path.extname(filePath).toLowerCase();
-        let content;
-
-        if (['.html', '.js', '.css', '.json'].includes(ext)) {
-            content = await readFile(filePath, 'utf8');
-        } else {
-            content = await readFile(filePath);
-        }
-
-        switch (ext) {
-            case '.js':
-                res.setHeader('Content-Type', 'application/javascript; charset=utf-8');
-                break;
-            case '.css':
-                res.setHeader('Content-Type', 'text/css; charset=utf-8');
-                break;
-            case '.html':
-                res.setHeader('Content-Type', 'text/html; charset=utf-8');
-                break;
-            case '.json':
-                res.setHeader('Content-Type', 'application/json; charset=utf-8');
-                break;
-            case '.png':
-                res.setHeader('Content-Type', 'image/png');
-                break;
-            case '.jpg':
-            case '.jpeg':
-                res.setHeader('Content-Type', 'image/jpeg');
-                break;
-            case '.gif':
-                res.setHeader('Content-Type', 'image/gif');
-                break;
-            default:
-                res.setHeader('Content-Type', 'application/octet-stream');
-        }
-
-        res.statusCode = 200;
-        res.end(content);
+    // ===== /request-info =====
+    if (pathname === '/request-info') {
+        await sendTemplate(res, path.join(TEMPLATES_DIR, 'request-info.html'), {
+            'user-agent': req.headers['user-agent'] || '',
+            'accept-encoding': req.headers['accept-encoding'] || '',
+            'accept': req.headers['accept'] || ''
+        });
         return;
-
-    } catch {
-        res.statusCode = 404;
-        res.setHeader('Content-Type', 'application/json; charset=utf-8');
-        res.end(JSON.stringify({ error: 'Not Found' }));
     }
+
+    // ===== Статические файлы =====
+    const filePath = pathname === '/' ? path.join(FRONTEND_DIR, 'index.html') : path.join(FRONTEND_DIR, pathname);
+    await sendFile(res, filePath, getContentType(filePath));
 });
 
 // ====================== Запуск сервера ======================
